@@ -82,9 +82,23 @@ def get_dvol_data():
         title=f'ETH DVOL    High: {year_max_eth}, Low: {year_min_eth}, Current: {current_vol_eth}'
     )
 
-    print('current vol:', current_vol)
-    print('IVR, min, max:', iv_rank, year_min, year_max)
-    print('IVP, total periods, periods lower:', iv_percentile, total_periods, periods_lower)
+    # BTC/ETH DVOL ratio
+    df_eth['ratio'] = df['close'] / df_eth['close']
+
+    ratio = go.Figure(
+        go.Scatter(
+            x=df_eth['date'],
+            y=df_eth['ratio']
+        )
+    )
+
+    ratio.update_layout(
+        title="BTC/ETH DVOL Ratio",
+        xaxis_title="Date",
+        yaxis_title="Ratio",
+        template='plotly_dark',
+    )
+
 
     return candles, iv_rank, iv_percentile, current_vol, year_min, year_max, \
-           candles_eth, iv_rank_eth, iv_percentile_eth, current_vol_eth, year_min_eth, year_max_eth
+           candles_eth, iv_rank_eth, iv_percentile_eth, current_vol_eth, year_min_eth, year_max_eth, ratio

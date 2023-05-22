@@ -15,7 +15,7 @@ from functions import get_dvol_data
 app = dash.Dash(title="Volatility Dashboard", external_stylesheets=[dbc.themes.DARKLY])
 
 btc_dvol_candles, btc_iv_rank, btc_iv_percentile, current_vol, year_min, year_max, \
-eth_dvol_candles, eth_iv_rank, eth_iv_percentile, eth_current_vol, eth_year_min, eth_year_max = get_dvol_data()
+eth_dvol_candles, eth_iv_rank, eth_iv_percentile, eth_current_vol, eth_year_min, eth_year_max, dvol_ratio = get_dvol_data()
 
 # Define the app layout
 app.layout = dbc.Container([
@@ -100,7 +100,7 @@ app.layout = dbc.Container([
                     showCurrentValue=True,
                     min=0,
                     max=100,
-                    label={'label': 'IV Rank', 'style': {'font-size': '15px'}},
+                    label={'label': 'IV Rank', 'style': {'font-size': '20px'}},
                     scale={'custom': {
                         '0': {'label': '0', 'style': {'font-size': '15px'}},
                         '20': {'label': '20', 'style': {'font-size': '15px'}},
@@ -136,6 +136,11 @@ app.layout = dbc.Container([
         ], width=1)
 
     ]),
+    dbc.Row([
+        dbc.Col([
+            dbc.Row([dcc.Graph(id='dvol_ratio', figure=dvol_ratio)]),
+        ], width=10)
+    ], className="mb-3")
 
 ], fluid=True)
 
@@ -147,6 +152,7 @@ app.layout = dbc.Container([
         Output('eth_dvol_candles', 'figure'),
         Output('eth_iv_rank_gauge', 'value'),
         Output('eth_iv_percentile_gauge', 'value'),
+        Output('dvol_ratio', 'figure'),
     ],
     Input('refresh_button', 'n_clicks'),
 )
@@ -154,9 +160,9 @@ def refresh_data(n_clicks):
     print('button presses: ', n_clicks)
 
     btc_dvol_candles, btc_iv_rank, btc_iv_percentile, current_vol, year_min, year_max, eth_dvol_candles, \
-    eth_iv_rank, eth_iv_percentile, eth_current_vol, eth_year_min, eth_year_max = get_dvol_data()
+    eth_iv_rank, eth_iv_percentile, eth_current_vol, eth_year_min, eth_year_max, dvol_ratio = get_dvol_data()
 
-    return btc_dvol_candles, btc_iv_rank, btc_iv_percentile, eth_dvol_candles, eth_iv_rank, eth_iv_percentile
+    return btc_dvol_candles, btc_iv_rank, btc_iv_percentile, eth_dvol_candles, eth_iv_rank, eth_iv_percentile, dvol_ratio
 
 # Run the app
 if __name__ == '__main__':
