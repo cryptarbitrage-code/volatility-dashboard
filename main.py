@@ -15,27 +15,18 @@ from functions import get_dvol_data
 app = dash.Dash(title="Volatility Dashboard", external_stylesheets=[dbc.themes.DARKLY])
 
 btc_dvol_candles, btc_iv_rank, btc_iv_percentile, current_vol, year_min, year_max, \
-eth_dvol_candles, eth_iv_rank, eth_iv_percentile, eth_current_vol, eth_year_min, eth_year_max, dvol_ratio = get_dvol_data()
+    eth_dvol_candles, eth_iv_rank, eth_iv_percentile, eth_current_vol, eth_year_min, eth_year_max, dvol_ratio = get_dvol_data()
 
-# Define the app layout
-app.layout = dbc.Container([
-    dbc.Row([
-        dbc.Col([html.H1(children='Crypto Volatility Dashboard')])
-    ]),
-    dbc.Row([
-        dbc.Col([
-            html.Div(children='''
-            Historical and implied volatility statistics for bitcoin and ethereum.
-            '''),
-        ])
-    ]),
+
+# DVOL tab layout
+dvol_tab = dbc.Container([
     dbc.Row([
         dbc.Col([
             dbc.Button(
                 html.B("Refresh"),
                 color="info",
                 id="refresh_button",
-                className="mb-3",
+                className="my-3",
                 style={'width': '100px'}
             ),
         ])
@@ -142,6 +133,36 @@ app.layout = dbc.Container([
         ], width=10)
     ], className="mb-3")
 
+], fluid=True)
+
+app.layout = dbc.Container([
+    dbc.Row([
+        dbc.Col([html.H2(children='Crypto Volatility Dashboard')])
+    ]),
+    dbc.Row([
+        dbc.Col([
+            html.Div(children='''
+            Historical and implied volatility statistics for bitcoin and ethereum.
+            '''),
+        ])
+    ]),
+    dbc.Tabs([
+        dbc.Tab(
+            dvol_tab,
+            label='DVOL',
+            tab_id='dvol_tab',
+            activeTabClassName='fw-bold',
+            active_label_style={"color": "#00CFBE"},
+        ),
+        # dbc.Tab(
+        #     tab_lookback,
+        #     label='Single Strategy Look Back',
+        #     tab_id='look_back_tab',
+        #     activeTabClassName='fw-bold',
+        #     active_label_style={"color": "#00CFBE"},
+        # ),
+    ], id="tabs_main", active_tab="dvol_tab"
+    ),
 ], fluid=True)
 
 @app.callback(
