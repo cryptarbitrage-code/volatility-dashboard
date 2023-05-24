@@ -2,6 +2,7 @@ from api_functions import get_volatility_index_data
 from datetime import datetime
 import plotly.graph_objects as go
 import pandas as pd
+import dash_daq as daq
 
 
 # resolution of dvol data
@@ -102,3 +103,26 @@ def get_dvol_data():
 
     return candles, iv_rank, iv_percentile, current_vol, year_min, year_max, \
            candles_eth, iv_rank_eth, iv_percentile_eth, current_vol_eth, year_min_eth, year_max_eth, ratio
+
+
+def create_daq_gauge(gauge_id, color, minimum, maximum, label, value, size):
+    gauge = daq.Gauge(
+        id=gauge_id,
+        color=color,
+        showCurrentValue=True,
+        min=minimum,
+        max=maximum,
+        label={'label': label, 'style': {'font-size': '20px'}},
+        scale={'custom': {
+            '0': {'label': '0', 'style': {'font-size': '15px'}},
+            '20': {'label': '20', 'style': {'font-size': '15px'}},
+            '40': {'label': '40', 'style': {'font-size': '15px'}},
+            '60': {'label': '60', 'style': {'font-size': '15px'}},
+            '80': {'label': '80', 'style': {'font-size': '15px'}},
+            '100': {'label': '100', 'style': {'font-size': '15px'}},
+        }},
+        value=value,
+        size=size,
+    )
+
+    return gauge

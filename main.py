@@ -8,7 +8,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
 from api_functions import get_volatility_index_data
-from functions import get_dvol_data
+from functions import get_dvol_data, create_daq_gauge
 
 
 # Initialize the app
@@ -33,106 +33,77 @@ dvol_tab = dbc.Container([
     ]),
     dbc.Row([
         dbc.Col([
+            dbc.Badge(
+                html.B("i"),
+                color="primary",
+                id="btc_dvol_info",
+                pill=True,
+                style={"position": "absolute", "top": "10px", "left": "20px", "zIndex": 2}
+            ),
+            dbc.Tooltip(
+                "Daily candle chart for the Deribit bitcoin volatility index for the previous year.",
+                target="btc_dvol_info",
+            ),
             dbc.Row([dcc.Graph(id='btc_dvol_candles', figure=btc_dvol_candles)]),
-        ], width=10),
+        ], width=10, style={'position': 'relative'}),
         dbc.Col([
             dbc.Row([
-                daq.Gauge(
-                    id='btc_iv_rank_gauge',
-                    color="#00cfbe",
-                    showCurrentValue=True,
-                    min=0,
-                    max=100,
-                    label={'label': 'IV Rank', 'style': {'font-size': '20px'}},
-                    scale={'custom': {
-                        '0': {'label': '0', 'style': {'font-size': '15px'}},
-                        '20': {'label': '20', 'style': {'font-size': '15px'}},
-                        '40': {'label': '40', 'style': {'font-size': '15px'}},
-                        '60': {'label': '60', 'style': {'font-size': '15px'}},
-                        '80': {'label': '80', 'style': {'font-size': '15px'}},
-                        '100': {'label': '100', 'style': {'font-size': '15px'}},
-                    }},
-                    value=btc_iv_rank,
-                    size=150,
-                )
+                create_daq_gauge('btc_iv_rank_gauge', "#00cfbe", 0, 100, 'IV Rank', btc_iv_rank, 150)
             ]),
             dbc.Row([
-                daq.Gauge(
-                    id='btc_iv_percentile_gauge',
-                    color="#00cfbe",
-                    showCurrentValue=True,
-                    min=0,
-                    max=100,
-                    label={'label': 'IV Percentile', 'style': {'font-size': '20px'}},
-                    scale={'custom': {
-                        '0': {'label': '0', 'style': {'font-size': '15px'}},
-                        '20': {'label': '20', 'style': {'font-size': '15px'}},
-                        '40': {'label': '40', 'style': {'font-size': '15px'}},
-                        '60': {'label': '60', 'style': {'font-size': '15px'}},
-                        '80': {'label': '80', 'style': {'font-size': '15px'}},
-                        '100': {'label': '100', 'style': {'font-size': '15px'}},
-                    }},
-                    value=btc_iv_percentile,
-                    size=150,
-                )
+                create_daq_gauge('btc_iv_percentile_gauge', "#00cfbe", 0, 100, 'IV Percentile', btc_iv_percentile, 150)
             ])
         ], width=1)
 
     ]),
     dbc.Row([
         dbc.Col([
+            dbc.Badge(
+                html.B("i"),
+                color="primary",
+                id="eth_dvol_info",
+                pill=True,
+                style={"position": "absolute", "top": "10px", "left": "20px", "zIndex": 2}
+            ),
+            dbc.Tooltip(
+                "Daily candle chart for the Deribit ethereum volatility index for the previous year.",
+                target="eth_dvol_info",
+            ),
             dbc.Row([dcc.Graph(id='eth_dvol_candles', figure=eth_dvol_candles)]),
-        ], width=10),
+        ], width=10, style={'position': 'relative'}),
         dbc.Col([
             dbc.Row([
-                daq.Gauge(
-                    id='eth_iv_rank_gauge',
-                    color="#00cfbe",
-                    showCurrentValue=True,
-                    min=0,
-                    max=100,
-                    label={'label': 'IV Rank', 'style': {'font-size': '20px'}},
-                    scale={'custom': {
-                        '0': {'label': '0', 'style': {'font-size': '15px'}},
-                        '20': {'label': '20', 'style': {'font-size': '15px'}},
-                        '40': {'label': '40', 'style': {'font-size': '15px'}},
-                        '60': {'label': '60', 'style': {'font-size': '15px'}},
-                        '80': {'label': '80', 'style': {'font-size': '15px'}},
-                        '100': {'label': '100', 'style': {'font-size': '15px'}},
-                    }},
-                    value=eth_iv_rank,
-                    size=150,
-                )
+                create_daq_gauge('eth_iv_rank_gauge', "#00cfbe", 0, 100, 'IV Rank', eth_iv_rank, 150)
             ]),
             dbc.Row([
-                daq.Gauge(
-                    id='eth_iv_percentile_gauge',
-                    color="#00cfbe",
-                    showCurrentValue=True,
-                    min=0,
-                    max=100,
-                    label={'label': 'IV Percentile', 'style': {'font-size': '20px'}},
-                    scale={'custom': {
-                        '0': {'label': '0', 'style': {'font-size': '15px'}},
-                        '20': {'label': '20', 'style': {'font-size': '15px'}},
-                        '40': {'label': '40', 'style': {'font-size': '15px'}},
-                        '60': {'label': '60', 'style': {'font-size': '15px'}},
-                        '80': {'label': '80', 'style': {'font-size': '15px'}},
-                        '100': {'label': '100', 'style': {'font-size': '15px'}},
-                    }},
-                    value=eth_iv_percentile,
-                    size=150,
-                )
+                create_daq_gauge('eth_iv_percentile_gauge', "#00cfbe", 0, 100, 'IV Percentile', eth_iv_percentile, 150)
             ])
         ], width=1)
-
     ]),
     dbc.Row([
         dbc.Col([
+            dbc.Badge(
+                html.B("i"),
+                color="primary",
+                id="dvol_ratio_info",
+                pill=True,
+                style={"position": "absolute", "top": "10px", "left": "20px", "zIndex": 2}
+            ),
+            dbc.Tooltip(
+                [html.P("The ratio between BTC DVOL and ETH DVOL. Calculated using close data from the daily candles."),
+                 html.P("When ratio > 1, BTC vol is higher. When ratio < 1, ETH vol is higher.")],
+                target="dvol_ratio_info",
+            ),
             dbc.Row([dcc.Graph(id='dvol_ratio', figure=dvol_ratio)]),
-        ], width=10)
+        ], width=10, style={'position': 'relative'})
     ], className="mb-3")
 
+], fluid=True)
+
+variance_premium_tab = dbc.Container([
+    dbc.Row([
+        dbc.Col([html.H2(children='Variance Premium')])
+    ]),
 ], fluid=True)
 
 app.layout = dbc.Container([
@@ -154,13 +125,13 @@ app.layout = dbc.Container([
             activeTabClassName='fw-bold',
             active_label_style={"color": "#00CFBE"},
         ),
-        # dbc.Tab(
-        #     tab_lookback,
-        #     label='Single Strategy Look Back',
-        #     tab_id='look_back_tab',
-        #     activeTabClassName='fw-bold',
-        #     active_label_style={"color": "#00CFBE"},
-        # ),
+        dbc.Tab(
+            variance_premium_tab,
+            label='Variance Premium',
+            tab_id='variance_premium_tab',
+            activeTabClassName='fw-bold',
+            active_label_style={"color": "#00CFBE"},
+        ),
     ], id="tabs_main", active_tab="dvol_tab"
     ),
 ], fluid=True)
