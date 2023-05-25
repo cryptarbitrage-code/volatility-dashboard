@@ -1,8 +1,11 @@
-from api_functions import get_volatility_index_data
+from api_functions import get_volatility_index_data, get_book_summary_by_currency
 from datetime import datetime
 import plotly.graph_objects as go
 import pandas as pd
 import dash_daq as daq
+import pytz
+import numpy as np
+from scipy.stats import norm
 
 
 # resolution of dvol data
@@ -103,6 +106,95 @@ def get_dvol_data():
 
     return candles, iv_rank, iv_percentile, current_vol, year_min, year_max, \
            candles_eth, iv_rank_eth, iv_percentile_eth, current_vol_eth, year_min_eth, year_max_eth, ratio
+
+
+def calculate_time_difference(date_string):
+    now = datetime.now(pytz.utc)
+    date = datetime.strptime(date_string, "%d%b%y")
+    date = date.replace(tzinfo=pytz.utc)
+    target_time = date.replace(hour=8, minute=0, second=0)
+    time_difference = (target_time - now).total_seconds()
+    seconds_in_a_year = 365 * 24 * 60 * 60
+    time_difference_years = time_difference / seconds_in_a_year
+    return time_difference_years
+
+
+def bs_call(S, K, T, r, sigma):
+    d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
+    d2 = d1 - sigma * np.sqrt(T)
+    return S * norm.cdf(d1) - np.exp(-r * T) * K * norm.cdf(d2)
+
+def calculate_implied_volatility(option_price, S, K, T, r):
+    MAX_ITERATIONS = 100
+    PRECISION = 0.0001
+    sigma_low = 0.01
+    sigma_high = 5
+    implied_volatility = None
+
+    for i in range(MAX_ITERATIONS):
+        sigma = (sigma_low + sigma_high) / 2.0
+        price = bs_call(S, K, T, r, sigma)
+        diff = option_price - price
+
+        if abs(diff) < PRECISION:
+            implied_volatility = sigma
+            break
+
+        if diff > 0:
+            sigma_low = sigma
+        else:
+            sigma_high = sigma
+
+    return implied_volatility
+
+def find_closest_strike(row):
+    # finds the strike closest to the underlying price (ATM)
+    idx = np.abs(row['strike'] - row['underlying_price']).idxmin()
+    return row.loc[idx, ['strike', 'expiry_date', 'implied_volatility']]
+
+def vol_term_structure(currency):
+    btc_data = get_book_summary_by_currency(currency, 'option')
+    df_btc = pd.DataFrame(btc_data)
+    df_btc = df_btc[['underlying_price', 'mark_price', 'instrument_name']]
+    df_btc[['currency', 'expiry', 'strike', 'type']] = df_btc['instrument_name'].str.split('-', expand=True)
+    df_btc = df_btc.drop(df_btc[df_btc['type'] == 'P'].index)
+    df_btc['usd_price'] = df_btc['underlying_price'] * df_btc['mark_price']
+    df_btc['strike'] = df_btc['strike'].astype(float)
+    # Drop rows where underlying_price is more than 15% away from strike
+    df_btc = df_btc.drop(df_btc[abs(df_btc['underlying_price'] - df_btc['strike']) / df_btc['strike'] > 0.15].index)
+    df_btc['time_to_expiry'] = df_btc['expiry'].apply(lambda x: calculate_time_difference(x))
+    df_btc['expiry_date'] = pd.to_datetime(df_btc['expiry'], format='%d%b%y')
+    # Apply the calculate_implied_volatility function to create the 'implied_volatility' column
+    df_btc['implied_volatility'] = df_btc.apply(lambda row: calculate_implied_volatility(
+        row['usd_price'],
+        row['underlying_price'],
+        row['strike'],
+        row['time_to_expiry'],
+        0
+    ), axis=1)
+    print(df_btc)
+    # Group the DataFrame by 'expiry'
+    grouped = df_btc.groupby('expiry_date')
+    # Apply the 'find_closest_strike' function to each group and collect the results
+    df_term_structure = grouped.apply(find_closest_strike)
+    # Reset the index and drop the original index column
+    df_term_structure = df_term_structure.reset_index(drop=True)
+    print(df_term_structure)
+
+    # Create a line chart using Plotly
+    fig = go.Figure(data=go.Scatter(
+        x=df_term_structure['expiry_date'],
+        y=df_term_structure['implied_volatility'],
+        mode='lines'
+    ))
+    # Customize the layout
+    fig.update_layout(
+        title=f'{currency} Implied Volatility Term Structure',
+        xaxis=dict(title='Expiry Date'),
+        yaxis=dict(title='Implied Volatility'),
+    )
+
+    return fig
 
 
 def create_daq_gauge(gauge_id, color, minimum, maximum, label, value, size):

@@ -8,8 +8,9 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
 from api_functions import get_volatility_index_data
-from functions import get_dvol_data, create_daq_gauge
+from functions import get_dvol_data, vol_term_structure, create_daq_gauge
 
+pd.set_option('display.max_columns', None)
 
 # Initialize the app
 app = dash.Dash(title="Volatility Dashboard", external_stylesheets=[dbc.themes.DARKLY])
@@ -100,10 +101,11 @@ dvol_tab = dbc.Container([
 
 ], fluid=True)
 
-variance_premium_tab = dbc.Container([
+term_structure_tab = dbc.Container([
     dbc.Row([
-        dbc.Col([html.H2(children='Variance Premium')])
+        dbc.Col([html.H2(children='Term Structure')])
     ]),
+    dbc.Row([dcc.Graph(id='btc_term_structure', figure=vol_term_structure('BTC'))])
 ], fluid=True)
 
 app.layout = dbc.Container([
@@ -126,9 +128,9 @@ app.layout = dbc.Container([
             active_label_style={"color": "#00CFBE"},
         ),
         dbc.Tab(
-            variance_premium_tab,
-            label='Variance Premium',
-            tab_id='variance_premium_tab',
+            term_structure_tab,
+            label='Term Structure',
+            tab_id='term_structure_tab',
             activeTabClassName='fw-bold',
             active_label_style={"color": "#00CFBE"},
         ),
@@ -152,7 +154,7 @@ def refresh_data(n_clicks):
     print('button presses: ', n_clicks)
 
     btc_dvol_candles, btc_iv_rank, btc_iv_percentile, current_vol, year_min, year_max, eth_dvol_candles, \
-    eth_iv_rank, eth_iv_percentile, eth_current_vol, eth_year_min, eth_year_max, dvol_ratio = get_dvol_data()
+        eth_iv_rank, eth_iv_percentile, eth_current_vol, eth_year_min, eth_year_max, dvol_ratio = get_dvol_data()
 
     return btc_dvol_candles, btc_iv_rank, btc_iv_percentile, eth_dvol_candles, eth_iv_rank, eth_iv_percentile, dvol_ratio
 
