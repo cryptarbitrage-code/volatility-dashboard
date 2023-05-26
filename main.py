@@ -8,9 +8,9 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
 from api_functions import get_volatility_index_data
-from functions import get_dvol_data, vol_term_structure, create_daq_gauge
+from functions import get_dvol_data, vol_term_structure, vol_surface, create_daq_gauge
 
-pd.set_option('display.max_columns', None)
+pd.set_option('display.max_columns', None)  # useful for testing
 
 # Initialize the app
 app = dash.Dash(title="Volatility Dashboard", external_stylesheets=[dbc.themes.DARKLY])
@@ -115,7 +115,7 @@ term_structure_tab = dbc.Container([
                 html.P("At the money implied volatility per expiry."),
                 target="btc_term_structure_info",
             ),
-            dcc.Graph(id='btc_term_structure', figure=vol_term_structure('BTC'))
+            dcc.Graph(id='btc_term_structure', figure=vol_term_structure('BTC')),
         ], width=6, style={'position': 'relative'}),
     ], className="my-3"),
     dbc.Row([
@@ -136,16 +136,44 @@ term_structure_tab = dbc.Container([
     ], className="mb-3"),
 ], fluid=True)
 
+vol_surface_tab = dbc.Container([
+    dbc.Row([
+        dbc.Col([
+            dbc.Badge(
+                html.B("i"),
+                color="primary",
+                id="btc_vol_surface_info",
+                pill=True,
+                style={"position": "absolute", "top": "10px", "left": "20px", "zIndex": 2}
+            ),
+            dbc.Tooltip(
+                [html.P("3D implied volatility surface for BTC."),
+                 html.P("Deltas of <0.01 and >0.99 have been dropped.")],
+                target="btc_vol_surface_info",
+            ),
+            dcc.Graph(id='btc_vol_surface', figure=vol_surface('BTC'))
+        ], width=6, style={'position': 'relative'}),
+        dbc.Col([
+            dbc.Badge(
+                html.B("i"),
+                color="primary",
+                id="eth_vol_surface_info",
+                pill=True,
+                style={"position": "absolute", "top": "10px", "left": "20px", "zIndex": 2}
+            ),
+            dbc.Tooltip(
+                [html.P("3D implied volatility surface for ETH."),
+                 html.P("Deltas of <0.01 and >0.99 have been dropped.")],
+                target="eth_vol_surface_info",
+            ),
+            dcc.Graph(id='eth_vol_surface', figure=vol_surface('ETH'))
+        ], width=6, style={'position': 'relative'}),
+    ], className="my-3"),
+], fluid=True)
+
 app.layout = dbc.Container([
     dbc.Row([
         dbc.Col([html.H2(children='Crypto Volatility Dashboard')])
-    ]),
-    dbc.Row([
-        dbc.Col([
-            html.Div(children='''
-            Historical and implied volatility statistics for bitcoin and ethereum.
-            '''),
-        ])
     ]),
     dbc.Tabs([
         dbc.Tab(
@@ -159,6 +187,13 @@ app.layout = dbc.Container([
             term_structure_tab,
             label='Term Structure',
             tab_id='term_structure_tab',
+            activeTabClassName='fw-bold',
+            active_label_style={"color": "#00CFBE"},
+        ),
+        dbc.Tab(
+            vol_surface_tab,
+            label='Vol Surface',
+            tab_id='vol_surface_tab',
             activeTabClassName='fw-bold',
             active_label_style={"color": "#00CFBE"},
         ),

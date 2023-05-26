@@ -6,6 +6,10 @@ import dash_daq as daq
 import pytz
 import numpy as np
 from scipy.stats import norm
+from scipy.interpolate import griddata
+
+N = norm.cdf
+Np = norm.pdf
 
 # put this code inside the get_dvol_data function?
 # resolution of dvol data
@@ -119,12 +123,25 @@ def calculate_time_difference(date_string):
     return time_difference_years
 
 
-def bs_call(S, K, T, r, sigma):
-    d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
+def bs_price(S, K, T, R, sigma, option_type):
+    d1 = (np.log(S / K) + (R + sigma ** 2 / 2) * T) / (sigma * np.sqrt(T))
     d2 = d1 - sigma * np.sqrt(T)
-    return S * norm.cdf(d1) - np.exp(-r * T) * K * norm.cdf(d2)
 
-def calculate_implied_volatility(option_price, S, K, T, r):
+    if option_type == "C":
+        price = S * N(d1) - K * np.exp(-R*T)* N(d2)
+    elif option_type == "P":
+        price = K*np.exp(-R*T)*N(-d2) - S*N(-d1)
+    return price
+
+def bs_delta(S, K, T, R, sigma, option_type):
+    d1 = (np.log(S / K) + (R + sigma ** 2 / 2) * T) / (sigma * np.sqrt(T))
+    if option_type == "C":
+        delta = N(d1)
+    elif option_type == "P":
+        delta = N(d1) - 1
+    return delta
+
+def calculate_implied_volatility(option_price, S, K, T, R, option_type):
     MAX_ITERATIONS = 100
     PRECISION = 0.0001
     sigma_low = 0.01
@@ -133,7 +150,7 @@ def calculate_implied_volatility(option_price, S, K, T, r):
 
     for i in range(MAX_ITERATIONS):
         sigma = (sigma_low + sigma_high) / 2.0
-        price = bs_call(S, K, T, r, sigma)
+        price = bs_price(S, K, T, R, sigma, option_type)
         diff = option_price - price
 
         if abs(diff) < PRECISION:
@@ -153,8 +170,8 @@ def find_closest_strike(row):
     return row.loc[idx, ['strike', 'expiry_date', 'implied_volatility']]
 
 def vol_term_structure(currency):
-    btc_data = get_book_summary_by_currency(currency, 'option')
-    df = pd.DataFrame(btc_data)
+    data = get_book_summary_by_currency(currency, 'option')
+    df = pd.DataFrame(data)
     df = df[['underlying_price', 'mark_price', 'instrument_name']]
     df[['currency', 'expiry', 'strike', 'type']] = df['instrument_name'].str.split('-', expand=True)
     df = df.drop(df[df['type'] == 'P'].index)
@@ -170,7 +187,8 @@ def vol_term_structure(currency):
         row['underlying_price'],
         row['strike'],
         row['time_to_expiry'],
-        0
+        0,
+        row['type']
     ), axis=1)
     # Group the DataFrame by 'expiry'
     grouped = df.groupby('expiry_date')
@@ -178,7 +196,6 @@ def vol_term_structure(currency):
     df_term_structure = grouped.apply(find_closest_strike)
     # Reset the index and drop the original index column
     df_term_structure = df_term_structure.reset_index(drop=True)
-    print(df_term_structure)
 
     # Create a line chart using Plotly
     fig = go.Figure(data=go.Scatter(
@@ -192,6 +209,64 @@ def vol_term_structure(currency):
         xaxis=dict(title='Expiry Date'),
         yaxis=dict(title='Implied Volatility'),
         template='plotly_dark',
+    )
+
+    return fig
+
+def vol_surface(currency):
+    data = get_book_summary_by_currency(currency, 'option')
+    df = pd.DataFrame(data)
+    df = df[['underlying_price', 'mark_price', 'instrument_name']]
+    df[['currency', 'expiry', 'strike', 'type']] = df['instrument_name'].str.split('-', expand=True)
+    df = df.drop(df[df['type'] == 'P'].index)
+    df['expiry_date'] = pd.to_datetime(df['expiry'], format='%d%b%y')
+    df['usd_price'] = df['underlying_price'] * df['mark_price']
+    df['strike'] = df['strike'].astype(float)
+    df['time_to_expiry'] = df['expiry'].apply(lambda x: calculate_time_difference(x))
+    df['expiry_date'] = pd.to_datetime(df['expiry'], format='%d%b%y')
+    # Apply the calculate_implied_volatility function to create the 'implied_volatility' column
+    df['implied_volatility'] = df.apply(lambda row: calculate_implied_volatility(
+        row['usd_price'],
+        row['underlying_price'],
+        row['strike'],
+        row['time_to_expiry'],
+        0,
+        row['type']
+    ), axis=1)
+    df['delta'] = df.apply(lambda row: bs_delta(
+        row['underlying_price'],
+        row['strike'],
+        row['time_to_expiry'],
+        0,
+        row['implied_volatility'],
+        row['type']
+    ), axis=1)
+
+    # drop extremes of delta
+    df = df[df['delta'] >= 0.01]
+    df = df[df['delta'] <= 0.99]
+
+    fig = go.Figure(data=go.Scatter3d(
+        x=df['expiry_date'],
+        y=df['delta'],
+        z=df['implied_volatility'],
+        mode='markers',
+        marker=dict(
+            size=3,
+            color=df['implied_volatility'],  # Color code based on 'implied_volatility' values
+            colorscale='Viridis',  # Choose a colorscale
+            opacity=0.8
+        ),
+    ))
+    fig.update_layout(
+        title=f'{currency} 3D Volatility Surface',
+        scene=dict(
+            xaxis_title='Expiry Date',
+            yaxis_title='Delta',
+            zaxis_title='Implied Volatility'
+        ),
+        template='plotly_dark',
+        height=800,
     )
 
     return fig
