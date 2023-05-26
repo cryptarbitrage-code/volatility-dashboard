@@ -7,7 +7,7 @@ import pytz
 import numpy as np
 from scipy.stats import norm
 
-
+# put this code inside the get_dvol_data function?
 # resolution of dvol data
 now = datetime.now()
 end_timestamp = round(datetime.timestamp(now) * 1000)
@@ -154,27 +154,26 @@ def find_closest_strike(row):
 
 def vol_term_structure(currency):
     btc_data = get_book_summary_by_currency(currency, 'option')
-    df_btc = pd.DataFrame(btc_data)
-    df_btc = df_btc[['underlying_price', 'mark_price', 'instrument_name']]
-    df_btc[['currency', 'expiry', 'strike', 'type']] = df_btc['instrument_name'].str.split('-', expand=True)
-    df_btc = df_btc.drop(df_btc[df_btc['type'] == 'P'].index)
-    df_btc['usd_price'] = df_btc['underlying_price'] * df_btc['mark_price']
-    df_btc['strike'] = df_btc['strike'].astype(float)
+    df = pd.DataFrame(btc_data)
+    df = df[['underlying_price', 'mark_price', 'instrument_name']]
+    df[['currency', 'expiry', 'strike', 'type']] = df['instrument_name'].str.split('-', expand=True)
+    df = df.drop(df[df['type'] == 'P'].index)
+    df['usd_price'] = df['underlying_price'] * df['mark_price']
+    df['strike'] = df['strike'].astype(float)
     # Drop rows where underlying_price is more than 15% away from strike
-    df_btc = df_btc.drop(df_btc[abs(df_btc['underlying_price'] - df_btc['strike']) / df_btc['strike'] > 0.15].index)
-    df_btc['time_to_expiry'] = df_btc['expiry'].apply(lambda x: calculate_time_difference(x))
-    df_btc['expiry_date'] = pd.to_datetime(df_btc['expiry'], format='%d%b%y')
+    df = df.drop(df[abs(df['underlying_price'] - df['strike']) / df['strike'] > 0.15].index)
+    df['time_to_expiry'] = df['expiry'].apply(lambda x: calculate_time_difference(x))
+    df['expiry_date'] = pd.to_datetime(df['expiry'], format='%d%b%y')
     # Apply the calculate_implied_volatility function to create the 'implied_volatility' column
-    df_btc['implied_volatility'] = df_btc.apply(lambda row: calculate_implied_volatility(
+    df['implied_volatility'] = df.apply(lambda row: calculate_implied_volatility(
         row['usd_price'],
         row['underlying_price'],
         row['strike'],
         row['time_to_expiry'],
         0
     ), axis=1)
-    print(df_btc)
     # Group the DataFrame by 'expiry'
-    grouped = df_btc.groupby('expiry_date')
+    grouped = df.groupby('expiry_date')
     # Apply the 'find_closest_strike' function to each group and collect the results
     df_term_structure = grouped.apply(find_closest_strike)
     # Reset the index and drop the original index column
@@ -192,6 +191,7 @@ def vol_term_structure(currency):
         title=f'{currency} Implied Volatility Term Structure',
         xaxis=dict(title='Expiry Date'),
         yaxis=dict(title='Implied Volatility'),
+        template='plotly_dark',
     )
 
     return fig

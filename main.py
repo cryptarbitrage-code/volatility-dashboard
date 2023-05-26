@@ -103,9 +103,37 @@ dvol_tab = dbc.Container([
 
 term_structure_tab = dbc.Container([
     dbc.Row([
-        dbc.Col([html.H2(children='Term Structure')])
-    ]),
-    dbc.Row([dcc.Graph(id='btc_term_structure', figure=vol_term_structure('BTC'))])
+        dbc.Col([
+            dbc.Badge(
+                html.B("i"),
+                color="primary",
+                id="btc_term_structure_info",
+                pill=True,
+                style={"position": "absolute", "top": "10px", "left": "20px", "zIndex": 2}
+            ),
+            dbc.Tooltip(
+                html.P("At the money implied volatility per expiry."),
+                target="btc_term_structure_info",
+            ),
+            dcc.Graph(id='btc_term_structure', figure=vol_term_structure('BTC'))
+        ], width=6, style={'position': 'relative'}),
+    ], className="my-3"),
+    dbc.Row([
+        dbc.Col([
+            dbc.Badge(
+                html.B("i"),
+                color="primary",
+                id="eth_term_structure_info",
+                pill=True,
+                style={"position": "absolute", "top": "10px", "left": "20px", "zIndex": 2}
+            ),
+            dbc.Tooltip(
+                html.P("At the money implied volatility per expiry."),
+                target="eth_term_structure_info",
+            ),
+            dcc.Graph(id='eth_term_structure', figure=vol_term_structure('ETH'))
+        ], width=6, style={'position': 'relative'}),
+    ], className="mb-3"),
 ], fluid=True)
 
 app.layout = dbc.Container([
