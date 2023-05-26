@@ -15,23 +15,24 @@ pd.set_option('display.max_columns', None)  # useful for testing
 # Initialize the app
 app = dash.Dash(title="Volatility Dashboard", external_stylesheets=[dbc.themes.DARKLY])
 
-btc_dvol_candles, btc_iv_rank, btc_iv_percentile, current_vol, year_min, year_max, \
-    eth_dvol_candles, eth_iv_rank, eth_iv_percentile, eth_current_vol, eth_year_min, eth_year_max, dvol_ratio = get_dvol_data()
+def fetch_data():
+    # dvol data
+    btc_dvol_candles, btc_iv_rank, btc_iv_percentile, eth_dvol_candles, eth_iv_rank, eth_iv_percentile, \
+        dvol_ratio = get_dvol_data()
+    # term structure
+    btc_vol_term_structure = vol_term_structure('BTC')
+    eth_vol_term_structure = vol_term_structure('ETH')
+    # vol_surface
+    btc_vol_surface = vol_surface('BTC')
+    eth_vol_surface = vol_surface('ETH')
+    return btc_dvol_candles, btc_iv_rank, btc_iv_percentile, eth_dvol_candles, eth_iv_rank, eth_iv_percentile, \
+           dvol_ratio, btc_vol_term_structure, eth_vol_term_structure, btc_vol_surface, eth_vol_surface
 
+btc_dvol_candles, btc_iv_rank, btc_iv_percentile, eth_dvol_candles, eth_iv_rank, eth_iv_percentile, \
+    dvol_ratio, btc_vol_term_structure, eth_vol_term_structure, btc_vol_surface, eth_vol_surface = fetch_data()
 
 # DVOL tab layout
 dvol_tab = dbc.Container([
-    dbc.Row([
-        dbc.Col([
-            dbc.Button(
-                html.B("Refresh"),
-                color="info",
-                id="refresh_button",
-                className="my-3",
-                style={'width': '100px'}
-            ),
-        ])
-    ]),
     dbc.Row([
         dbc.Col([
             dbc.Badge(
@@ -56,7 +57,7 @@ dvol_tab = dbc.Container([
             ])
         ], width=1)
 
-    ]),
+    ], className="mt-3"),
     dbc.Row([
         dbc.Col([
             dbc.Badge(
@@ -115,7 +116,7 @@ term_structure_tab = dbc.Container([
                 html.P("At the money implied volatility per expiry."),
                 target="btc_term_structure_info",
             ),
-            dcc.Graph(id='btc_term_structure', figure=vol_term_structure('BTC')),
+            dcc.Graph(id='btc_vol_term_structure', figure=btc_vol_term_structure),
         ], width=6, style={'position': 'relative'}),
     ], className="my-3"),
     dbc.Row([
@@ -131,7 +132,7 @@ term_structure_tab = dbc.Container([
                 html.P("At the money implied volatility per expiry."),
                 target="eth_term_structure_info",
             ),
-            dcc.Graph(id='eth_term_structure', figure=vol_term_structure('ETH'))
+            dcc.Graph(id='eth_vol_term_structure', figure=eth_vol_term_structure)
         ], width=6, style={'position': 'relative'}),
     ], className="mb-3"),
 ], fluid=True)
@@ -151,7 +152,7 @@ vol_surface_tab = dbc.Container([
                  html.P("Deltas of <0.01 and >0.99 have been dropped.")],
                 target="btc_vol_surface_info",
             ),
-            dcc.Graph(id='btc_vol_surface', figure=vol_surface('BTC'))
+            dcc.Graph(id='btc_vol_surface', figure=btc_vol_surface)
         ], width=6, style={'position': 'relative'}),
         dbc.Col([
             dbc.Badge(
@@ -166,14 +167,23 @@ vol_surface_tab = dbc.Container([
                  html.P("Deltas of <0.01 and >0.99 have been dropped.")],
                 target="eth_vol_surface_info",
             ),
-            dcc.Graph(id='eth_vol_surface', figure=vol_surface('ETH'))
+            dcc.Graph(id='eth_vol_surface', figure=eth_vol_surface)
         ], width=6, style={'position': 'relative'}),
     ], className="my-3"),
 ], fluid=True)
 
 app.layout = dbc.Container([
     dbc.Row([
-        dbc.Col([html.H2(children='Crypto Volatility Dashboard')])
+        dbc.Col([html.H2(children='Crypto Volatility Dashboard')]),
+        dbc.Col([
+            dbc.Button(
+                html.B("Refresh"),
+                color="info",
+                id="refresh_button",
+                className="my-3",
+                style={'width': '100px'}
+            ),
+        ])
     ]),
     dbc.Tabs([
         dbc.Tab(
@@ -210,16 +220,21 @@ app.layout = dbc.Container([
         Output('eth_iv_rank_gauge', 'value'),
         Output('eth_iv_percentile_gauge', 'value'),
         Output('dvol_ratio', 'figure'),
+        Output('btc_vol_term_structure', 'figure'),
+        Output('eth_vol_term_structure', 'figure'),
+        Output('btc_vol_surface', 'figure'),
+        Output('eth_vol_surface', 'figure'),
     ],
     Input('refresh_button', 'n_clicks'),
 )
 def refresh_data(n_clicks):
     print('button presses: ', n_clicks)
 
-    btc_dvol_candles, btc_iv_rank, btc_iv_percentile, current_vol, year_min, year_max, eth_dvol_candles, \
-        eth_iv_rank, eth_iv_percentile, eth_current_vol, eth_year_min, eth_year_max, dvol_ratio = get_dvol_data()
+    btc_dvol_candles, btc_iv_rank, btc_iv_percentile, eth_dvol_candles, eth_iv_rank, eth_iv_percentile, \
+    dvol_ratio, btc_vol_term_structure, eth_vol_term_structure, btc_vol_surface, eth_vol_surface = fetch_data()
 
-    return btc_dvol_candles, btc_iv_rank, btc_iv_percentile, eth_dvol_candles, eth_iv_rank, eth_iv_percentile, dvol_ratio
+    return btc_dvol_candles, btc_iv_rank, btc_iv_percentile, eth_dvol_candles, eth_iv_rank, eth_iv_percentile, \
+           dvol_ratio, btc_vol_term_structure, eth_vol_term_structure, btc_vol_surface, eth_vol_surface
 
 # Run the app
 if __name__ == '__main__':

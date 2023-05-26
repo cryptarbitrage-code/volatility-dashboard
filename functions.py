@@ -6,7 +6,7 @@ import dash_daq as daq
 import pytz
 import numpy as np
 from scipy.stats import norm
-from scipy.interpolate import griddata
+import math
 
 N = norm.cdf
 Np = norm.pdf
@@ -108,8 +108,7 @@ def get_dvol_data():
     )
 
 
-    return candles, iv_rank, iv_percentile, current_vol, year_min, year_max, \
-           candles_eth, iv_rank_eth, iv_percentile_eth, current_vol_eth, year_min_eth, year_max_eth, ratio
+    return candles, iv_rank, iv_percentile, candles_eth, iv_rank_eth, iv_percentile_eth, ratio
 
 
 def calculate_time_difference(date_string):
@@ -254,16 +253,25 @@ def vol_surface(currency):
         marker=dict(
             size=3,
             color=df['implied_volatility'],  # Color code based on 'implied_volatility' values
-            colorscale='Viridis',  # Choose a colorscale
+            colorscale='Sunset_r',  # Choose a colorscale
             opacity=0.8
         ),
+        hovertemplate=
+        '<b>Expiry Date:</b>: %{x}' +
+        '<br><b>Delta:</b>: %{y}' +
+        '<br><b>Implied Volatility:</b>: %{z}<br>' +
+        '<extra></extra>', # removes the secondary box
     ))
+    # round the maximum vol for the z axis to the nearest 0.2
+    max_vol = df['implied_volatility'].max()
+    rounded_max_vol = math.ceil(max_vol / 0.2) * 0.2
     fig.update_layout(
         title=f'{currency} 3D Volatility Surface',
         scene=dict(
             xaxis_title='Expiry Date',
             yaxis_title='Delta',
-            zaxis_title='Implied Volatility'
+            zaxis_title='Implied Volatility',
+            zaxis=dict(range=[0, rounded_max_vol])
         ),
         template='plotly_dark',
         height=800,
