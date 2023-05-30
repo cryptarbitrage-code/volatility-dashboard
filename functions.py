@@ -185,14 +185,32 @@ def vol_term_structure(currency):
     fig = go.Figure(data=go.Scatter(
         x=df_term_structure['expiry_date'],
         y=df_term_structure['implied_volatility'],
-        mode='lines'
+        mode='lines',
+        # line_shape='spline'  # enable this for a smoothed line
     ))
+    # Generate vertical lines for each expiry_date
+    shapes = []
+    for expiry_date in df_term_structure['expiry_date']:
+        shapes.append(
+            dict(
+                type='line',
+                xref='x', x0=expiry_date, x1=expiry_date,
+                yref='y', y0=df_term_structure['implied_volatility'].min(),
+                y1=df_term_structure['implied_volatility'].max(),
+                line=dict(
+                    color='rgba(255, 0, 255, 0.5)',
+                    width=1,
+                    dash='dash',
+                )
+            )
+        )
     # Customize the layout
     fig.update_layout(
         title=f'{currency} Implied Volatility Term Structure',
         xaxis=dict(title='Expiry Date'),
         yaxis=dict(title='Implied Volatility'),
         template='plotly_dark',
+        shapes=shapes,
     )
 
     return fig
