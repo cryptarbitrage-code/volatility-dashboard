@@ -2,7 +2,6 @@ from api_functions import get_volatility_index_data, get_book_summary_by_currenc
 from datetime import datetime
 import plotly.graph_objects as go
 import pandas as pd
-import dash_daq as daq
 import pytz
 import numpy as np
 from scipy.stats import norm

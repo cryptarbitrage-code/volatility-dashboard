@@ -3,11 +3,7 @@ import dash
 from dash import dcc, html
 from dash.dependencies import Input, Output
 import dash_bootstrap_components as dbc
-import dash_daq as daq
 import pandas as pd
-import plotly.graph_objects as go
-from datetime import datetime
-from api_functions import get_volatility_index_data
 from functions import get_dvol_data, vol_term_structure, vol_surface, draw_indicator
 
 pd.set_option('display.max_columns', None)  # useful for testing
@@ -55,7 +51,7 @@ dvol_tab = dbc.Container([
             dbc.Row([
                 dcc.Graph(id='btc_iv_percentile_indicator', figure=draw_indicator('magenta', 0, 100, 'IV Rank', btc_iv_percentile, 250, 200))
             ])
-        ], width=1)
+        ], width=2)
 
     ], className="my-3"),
     dbc.Row([
@@ -80,7 +76,7 @@ dvol_tab = dbc.Container([
             dbc.Row([
                 dcc.Graph(id='eth_iv_percentile_indicator', figure=draw_indicator('magenta', 0, 100, 'IV Rank', eth_iv_percentile, 250, 200))
             ])
-        ], width=1)
+        ], width=2)
     ], className="mb-3"),
     dbc.Row([
         dbc.Col([
@@ -174,14 +170,17 @@ vol_surface_tab = dbc.Container([
 
 app.layout = dbc.Container([
     dbc.Row([
-        dbc.Col([html.H2(children='Crypto Volatility Dashboard')]),
+        dbc.Col([html.H3(children='Crypto Volatility Dashboard')]),
         dbc.Col([
-            dbc.Button(
-                html.B("Refresh"),
-                color="info",
-                id="refresh_button",
-                className="my-3",
-                style={'width': '100px'}
+            html.Div(
+                dbc.Button(
+                    html.B("Refresh"),
+                    color="info",
+                    id="refresh_button",
+                    className="my-1",
+                    style={'width': '100px'}
+                ),
+                style={'text-align': 'right'}
             ),
         ])
     ]),
