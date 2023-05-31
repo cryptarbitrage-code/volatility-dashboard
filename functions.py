@@ -47,7 +47,8 @@ def dvol_charts(currency, start_timestamp, end_timestamp, dvol_resolution):
         ]
     )
     candles.update_layout(
-        height=500, template='plotly_dark',
+        height=400,
+        template='plotly_dark',
         title=f'{currency} DVOL    High: {year_max}, Low: {year_min}, Current: {current_vol}',
         shapes=[
             dict(
@@ -91,6 +92,7 @@ def get_dvol_data():
         xaxis_title="Date",
         yaxis_title="Ratio",
         template='plotly_dark',
+        height=400
     )
 
     return btc_candles, btc_iv_rank, btc_iv_percentile, eth_candles, eth_v_rank, eth_iv_percentile, ratio
@@ -211,6 +213,7 @@ def vol_term_structure(currency):
         yaxis=dict(title='Implied Volatility'),
         template='plotly_dark',
         shapes=shapes,
+        height=400,
     )
 
     return fig
@@ -282,25 +285,27 @@ def vol_surface(currency):
 
     return fig
 
-
-def create_daq_gauge(gauge_id, color, minimum, maximum, label, value, size):
-    gauge = daq.Gauge(
-        id=gauge_id,
-        color=color,
-        showCurrentValue=True,
-        min=minimum,
-        max=maximum,
-        label={'label': label, 'style': {'font-size': '20px'}},
-        scale={'custom': {
-            '0': {'label': '0', 'style': {'font-size': '15px'}},
-            '20': {'label': '20', 'style': {'font-size': '15px'}},
-            '40': {'label': '40', 'style': {'font-size': '15px'}},
-            '60': {'label': '60', 'style': {'font-size': '15px'}},
-            '80': {'label': '80', 'style': {'font-size': '15px'}},
-            '100': {'label': '100', 'style': {'font-size': '15px'}},
-        }},
+def draw_indicator(color, minimum, maximum, title, value, width, height):
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
         value=value,
-        size=size,
+        title={'text': title},
+        domain={'x': [0, 1], 'y': [0, 1]},
+        gauge={'axis': {'range': [minimum, maximum], 'dtick': 20},
+               'bar': {'color': color}}
+    ))
+    fig.update_layout(
+        template='plotly_dark',
+        autosize=False,
+        margin=dict(
+            l=30,  # left margin
+            r=40,  # right margin
+            b=0,  # bottom margin
+            t=20,  # top margin
+            pad=0  # padding
+        ),
+        paper_bgcolor="rgba(0,0,0,0)",  # makes the background transparent
+        height=height,
+        width=width,
     )
-
-    return gauge
+    return fig

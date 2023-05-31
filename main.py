@@ -8,7 +8,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
 from api_functions import get_volatility_index_data
-from functions import get_dvol_data, vol_term_structure, vol_surface, create_daq_gauge
+from functions import get_dvol_data, vol_term_structure, vol_surface, draw_indicator
 
 pd.set_option('display.max_columns', None)  # useful for testing
 
@@ -50,14 +50,14 @@ dvol_tab = dbc.Container([
         ], width=10, style={'position': 'relative'}),
         dbc.Col([
             dbc.Row([
-                create_daq_gauge('btc_iv_rank_gauge', "#00cfbe", 0, 100, 'IV Rank', btc_iv_rank, 150)
+                dcc.Graph(id='btc_iv_rank_indicator', figure=draw_indicator('magenta', 0, 100, 'IV Rank', btc_iv_rank, 250, 200))
             ]),
             dbc.Row([
-                create_daq_gauge('btc_iv_percentile_gauge', "#00cfbe", 0, 100, 'IV Percentile', btc_iv_percentile, 150)
+                dcc.Graph(id='btc_iv_percentile_indicator', figure=draw_indicator('magenta', 0, 100, 'IV Rank', btc_iv_percentile, 250, 200))
             ])
         ], width=1)
 
-    ], className="mt-3"),
+    ], className="my-3"),
     dbc.Row([
         dbc.Col([
             dbc.Badge(
@@ -75,13 +75,13 @@ dvol_tab = dbc.Container([
         ], width=10, style={'position': 'relative'}),
         dbc.Col([
             dbc.Row([
-                create_daq_gauge('eth_iv_rank_gauge', "#00cfbe", 0, 100, 'IV Rank', eth_iv_rank, 150)
+                dcc.Graph(id='eth_iv_rank_indicator', figure=draw_indicator('magenta', 0, 100, 'IV Rank', eth_iv_rank, 250, 200))
             ]),
             dbc.Row([
-                create_daq_gauge('eth_iv_percentile_gauge', "#00cfbe", 0, 100, 'IV Percentile', eth_iv_percentile, 150)
+                dcc.Graph(id='eth_iv_percentile_indicator', figure=draw_indicator('magenta', 0, 100, 'IV Rank', eth_iv_percentile, 250, 200))
             ])
         ], width=1)
-    ]),
+    ], className="mb-3"),
     dbc.Row([
         dbc.Col([
             dbc.Badge(
@@ -113,7 +113,7 @@ term_structure_tab = dbc.Container([
                 style={"position": "absolute", "top": "10px", "left": "20px", "zIndex": 2}
             ),
             dbc.Tooltip(
-                html.P("At the money implied volatility per expiry."),
+                html.P("Current at the money implied volatility per expiry."),
                 target="btc_term_structure_info",
             ),
             dcc.Graph(id='btc_vol_term_structure', figure=btc_vol_term_structure),
@@ -129,7 +129,7 @@ term_structure_tab = dbc.Container([
                 style={"position": "absolute", "top": "10px", "left": "20px", "zIndex": 2}
             ),
             dbc.Tooltip(
-                html.P("At the money implied volatility per expiry."),
+                html.P("Current at the money implied volatility per expiry."),
                 target="eth_term_structure_info",
             ),
             dcc.Graph(id='eth_vol_term_structure', figure=eth_vol_term_structure)
@@ -214,11 +214,11 @@ app.layout = dbc.Container([
 @app.callback(
     [
         Output('btc_dvol_candles', 'figure'),
-        Output('btc_iv_rank_gauge', 'value'),
-        Output('btc_iv_percentile_gauge', 'value'),
+        Output('btc_iv_rank_indicator', 'figure'),
+        Output('btc_iv_percentile_indicator', 'figure'),
         Output('eth_dvol_candles', 'figure'),
-        Output('eth_iv_rank_gauge', 'value'),
-        Output('eth_iv_percentile_gauge', 'value'),
+        Output('eth_iv_rank_indicator', 'figure'),
+        Output('eth_iv_percentile_indicator', 'figure'),
         Output('dvol_ratio', 'figure'),
         Output('btc_vol_term_structure', 'figure'),
         Output('eth_vol_term_structure', 'figure'),
@@ -233,8 +233,14 @@ def refresh_data(n_clicks):
     btc_dvol_candles, btc_iv_rank, btc_iv_percentile, eth_dvol_candles, eth_iv_rank, eth_iv_percentile, \
     dvol_ratio, btc_vol_term_structure, eth_vol_term_structure, btc_vol_surface, eth_vol_surface = fetch_data()
 
-    return btc_dvol_candles, btc_iv_rank, btc_iv_percentile, eth_dvol_candles, eth_iv_rank, eth_iv_percentile, \
-           dvol_ratio, btc_vol_term_structure, eth_vol_term_structure, btc_vol_surface, eth_vol_surface
+    btc_iv_rank_indicator = draw_indicator('magenta', 0, 100, 'IV Rank', btc_iv_rank, 250, 200)
+    btc_iv_percentile_indicator = draw_indicator('magenta', 0, 100, 'IV Percentile', btc_iv_percentile, 250, 200)
+    eth_iv_rank_indicator = draw_indicator('magenta', 0, 100, 'IV Rank', eth_iv_rank, 250, 200)
+    eth_iv_percentile_indicator = draw_indicator('magenta', 0, 100, 'IV Percentile', eth_iv_percentile, 250, 200)
+
+    return btc_dvol_candles, btc_iv_rank_indicator, btc_iv_percentile_indicator, eth_dvol_candles, \
+           eth_iv_rank_indicator, eth_iv_percentile_indicator, dvol_ratio, btc_vol_term_structure, \
+           eth_vol_term_structure, btc_vol_surface, eth_vol_surface
 
 # Run the app
 if __name__ == '__main__':
