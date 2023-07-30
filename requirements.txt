@@ -1,0 +1,4 @@
+dash==2.11.1
+dash-bootstrap-components==1.4.2
+pandas==2.0.3
+scipy==1.11.1
