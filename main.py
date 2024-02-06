@@ -4,7 +4,9 @@ from dash import dcc, html
 from dash.dependencies import Input, Output
 import dash_bootstrap_components as dbc
 import pandas as pd
-from functions import get_dvol_data, vol_term_structure, vol_surface, draw_indicator
+import numpy as np
+from functions import hv_charts, get_dvol_data, vol_term_structure, vol_surface, draw_indicator, chart_card
+import yfinance as yf
 
 pd.set_option('display.max_columns', None)  # useful for testing
 
@@ -26,6 +28,25 @@ def fetch_data():
 
 btc_dvol_candles, btc_iv_rank, btc_iv_percentile, eth_dvol_candles, eth_iv_rank, eth_iv_percentile, \
     dvol_ratio, btc_vol_term_structure, eth_vol_term_structure, btc_vol_surface, eth_vol_surface = fetch_data()
+
+def parkinson_volatility(high, low, window):
+    factor = 1 / (4 * np.log(2))
+    log_hl_ratio_squared = (np.log(high / low)) ** 2
+    return np.sqrt((factor * log_hl_ratio_squared.rolling(window=window).mean()))
+
+# pull historical price data
+btc = yf.Ticker("BTC-USD")
+btc_data = btc.history(period="3y")
+btc_data['log_return'] = np.log(btc_data['Close'] / btc_data['Close'].shift(1))
+
+# Calculate the historical volatility
+time_frames = [7, 30, 90, 365]
+for days in time_frames:
+    btc_data[f'{days}_day_close_vol'] = btc_data['log_return'].rolling(window=days).std() * np.sqrt(365) # Annualizing the volatility
+    btc_data[f'{days}_day_park_vol'] = parkinson_volatility(btc_data['High'], btc_data['Low'], days) * np.sqrt(365) # Annualizing the volatility
+    btc_data[f'{days}_day_park_close_ratio'] = btc_data[f'{days}_day_park_vol'] / btc_data[f'{days}_day_close_vol']
+
+close_vol, park_vol, close_park_ratio, vol_cones = hv_charts(btc_data, time_frames)
 
 # DVOL tab layout
 dvol_tab = dbc.Container([
@@ -168,9 +189,40 @@ vol_surface_tab = dbc.Container([
     ], className="my-3"),
 ], fluid=True)
 
+historical_vol_tab = dbc.Container([
+    html.Div(children=[
+        chart_card(
+            'BTC Close to Close Historical Volatility',
+            dcc.Graph(id='close_vol', figure=close_vol),
+            'Close to close historical volatility (daily data)'
+        ),
+        chart_card(
+            'BTC Parkinson Historical Volatility',
+            dcc.Graph(id='park_vol', figure=park_vol),
+            'BTC Parkinson historical volatility (daily data)'
+        ),
+        chart_card(
+            'BTC Parkinson:C2C Ratio',
+            dcc.Graph(id='close_park_ratio', figure=close_park_ratio),
+            'The ratio of parkinson vol to close to close vol.'
+        ),
+        chart_card(
+            'BTC Parkinson Historical Volatility',
+            dcc.Graph(id='vol_cones', figure=vol_cones),
+            'Volatility cones for BTC. Uses parkinson volatility.'
+        ),
+    ]),
+], fluid=True)
+
 app.layout = dbc.Container([
     dbc.Row([
         dbc.Col([html.H3(children='Crypto Volatility Dashboard')]),
+        dbc.Col([
+            html.Div(
+                html.A("Trade on Deribit", href="https://www.deribit.com/?reg=1332.557&q=home", target="_blank"),
+                style={'text-align': 'right'}
+            ),
+        ]),
         dbc.Col([
             html.Div(
                 dbc.Button(
@@ -206,6 +258,14 @@ app.layout = dbc.Container([
             activeTabClassName='fw-bold',
             active_label_style={"color": "#00CFBE"},
         ),
+        dbc.Tab(
+            historical_vol_tab,
+            label='Historical Vol',
+            tab_id='historical_vol_tab',
+            activeTabClassName='fw-bold',
+            active_label_style={"color": "#00CFBE"},
+        ),
+
     ], id="tabs_main", active_tab="dvol_tab"
     ),
 ], fluid=True)

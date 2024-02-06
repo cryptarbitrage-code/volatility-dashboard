@@ -6,9 +6,120 @@ import pytz
 import numpy as np
 from scipy.stats import norm
 import math
+import plotly.express as px
+import dash_bootstrap_components as dbc
+from dash import html
 
 N = norm.cdf
 Np = norm.pdf
+
+def hv_charts(btc_data, time_frames):
+
+    # Create a figure for close-to-close volatility
+    fig_close = px.line(btc_data, x=btc_data.index,
+                        y=[f'{days}_day_close_vol' for days in time_frames],
+                        height=400,
+                        template='plotly_dark',
+                        )
+    fig_close.update_layout(hovermode='x unified')
+
+    for trace in fig_close.data:
+        trace.hovertemplate = '%{y:.4f}<extra></extra>'
+
+    # Create a figure for Parkinson volatility
+    fig_park = px.line(btc_data, x=btc_data.index,
+                       y=[f'{days}_day_park_vol' for days in time_frames],
+                       height=400,
+                       template='plotly_dark',
+                       )
+    fig_park.update_layout(hovermode='x unified')
+
+    # Create a figure for Close:Parkinson ratio
+    fig_close_park_ratio = px.line(btc_data, x=btc_data.index,
+                                   y=[f'{days}_day_park_close_ratio' for days in time_frames],
+                                   height=400,
+                                   template='plotly_dark',
+                                   )
+    fig_close_park_ratio.update_layout(hovermode='x unified')
+    # Adjust the hovertemplate for each trace to only show y-values
+    for trace in fig_close.data:
+        trace.hovertemplate = '%{y:.4f}<extra></extra>'
+    for trace in fig_park.data:
+        trace.hovertemplate = '%{y:.4f}<extra></extra>'
+    for trace in fig_close_park_ratio.data:
+        trace.hovertemplate = '%{y:.4f}<extra></extra>'
+
+
+    # Update traces to set visibility
+    traces_to_show = [7, 30, 365]  # periods to show by default
+
+    for i, period in enumerate(time_frames):
+        if period not in traces_to_show:
+            fig_close.data[i].visible = 'legendonly'
+
+    for i, period in enumerate(time_frames):
+        if period not in traces_to_show:
+            fig_park.data[i].visible = 'legendonly'
+
+    for i, period in enumerate(time_frames):
+        if period not in traces_to_show:
+            fig_close_park_ratio.data[i].visible = 'legendonly'
+
+    # volatility cones
+    percentiles = [10, 50, 90]
+    percentile_colors = {10: 'MediumPurple', 50: 'MediumSeaGreen', 90: 'MediumPurple'}
+    df_hv_btc_cleaned = btc_data.dropna()
+
+    # Calculate percentiles for each window length
+    volatility_percentiles = {
+        window: {perc: np.percentile(df_hv_btc_cleaned[f'{window}_day_park_vol'], perc) for perc in percentiles} for window in
+        time_frames}
+    print(volatility_percentiles)
+
+    fig_vol_cones = go.Figure()
+
+    # Plot each percentile
+    for perc in percentiles:
+        fig_vol_cones.add_trace(go.Scatter(
+            x=time_frames,
+            y=[volatility_percentiles[window][perc] for window in time_frames],
+            mode='lines+markers',
+            name=f'{perc}th percentile',
+            line=dict(color=percentile_colors[perc])
+        ))
+
+    # Update the layout as needed
+    fig_vol_cones.update_layout(
+        xaxis_title="Window Length (days)",
+        yaxis_title="Volatility",
+        template="plotly_dark",
+        hovermode='x unified'
+    )
+
+    # Calculate min and max for each window length
+    volatility_min_max = {window: {'min': np.min(df_hv_btc_cleaned[f'{window}_day_park_vol']),
+                                   'max': np.max(df_hv_btc_cleaned[f'{window}_day_park_vol'])}
+                          for window in time_frames}
+
+    # Add min and max to the plot
+    fig_vol_cones.add_trace(go.Scatter(
+        x=time_frames,
+        y=[volatility_min_max[window]['min'] for window in time_frames],
+        mode='lines+markers',
+        name='Min',
+        line=dict(color='crimson')
+    ))
+
+    fig_vol_cones.add_trace(go.Scatter(
+        x=time_frames,
+        y=[volatility_min_max[window]['max'] for window in time_frames],
+        mode='lines+markers',
+        name='Max',
+        line=dict(color='crimson')
+    ))
+
+    return fig_close, fig_park, fig_close_park_ratio, fig_vol_cones
+
 
 def dvol_charts(currency, start_timestamp, end_timestamp, dvol_resolution):
     #get the dvol data from the deribit api
@@ -308,3 +419,29 @@ def draw_indicator(color, minimum, maximum, title, value, width, height):
         width=width,
     )
     return fig
+
+def chart_card(title, chart, info_text):
+    card = dbc.Card(
+        children=[
+            dbc.CardHeader(title, style={'padding-left': '50px'}),
+            dbc.CardBody(chart, style={'padding': '0px'}),
+            dbc.Badge(
+                html.B("i"),
+                color="primary",
+                id=f'{chart.id}_info',
+                pill=True,
+                style={"position": "absolute", "top": "10px", "left": "20px", "zIndex": 2}
+            ),
+            dbc.Tooltip(
+                info_text,
+                target=f'{chart.id}_info',
+            ),
+        ],
+        style={
+            'width': '49%',
+            'display': 'inline-block',
+            'min-width': '600px',
+            'margin': '2px',
+        }
+    )
+    return card
