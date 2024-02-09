@@ -1,6 +1,6 @@
 # Volatility Dashboard
 import dash
-from dash import dcc, html
+from dash import dcc, html, callback_context
 from dash.dependencies import Input, Output
 import dash_bootstrap_components as dbc
 import pandas as pd
@@ -193,14 +193,15 @@ vol_surface_tab = dbc.Container([
 ], fluid=True)
 
 historical_vol_tab = dbc.Container([
-    html.Div(
-        dcc.Dropdown(
-            id='historical_vol_currency_dropdown',
-            options=['BTC-USD', 'ETH-USD', 'SOL-USD'],
-            value='BTC-USD',
-            style={'margin-top': '2px'},
-            className='text-black',
-        )
+    dbc.DropdownMenu(
+        id="historical_vol_currency_dropdown",
+        label="Select Currency",  # Initial label
+        children=[
+            dbc.DropdownMenuItem("BTC-USD", id="BTC-USD"),
+            dbc.DropdownMenuItem("ETH-USD", id="ETH-USD"),
+            dbc.DropdownMenuItem("SOL-USD", id="SOL-USD"),
+        ],
+        style={'margin-top': '2px'},
     ),
     html.Div(id='historical_vol_charts', children=[
         chart_card(
@@ -315,9 +316,22 @@ def refresh_data(n_clicks):
 
 @app.callback(
     Output('historical_vol_charts', 'children'),
-    [Input('historical_vol_currency_dropdown', 'value')]
+    Output("historical_vol_currency_dropdown", "label"),
+    [Input("BTC-USD", "n_clicks"),
+     Input("ETH-USD", "n_clicks"),
+     Input("SOL-USD", "n_clicks")],
+    prevent_initial_call=True
 )
-def historical_price_data(selected_currency):
+def historical_price_data(*args):
+    # Determine which button was clicked
+    ctx = callback_context
+    if not ctx.triggered:
+        # Default to BTC-USD if nothing was clicked yet
+        selected_currency = 'BTC-USD'
+    else:
+        button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+        selected_currency = button_id
+
     # fetch data for the selected currency, and calculate the new data
     close_vol, park_vol, close_park_ratio, vol_cones = fetch_historical_vol_data(selected_currency, '3y')
     new_content = [
@@ -342,7 +356,7 @@ def historical_price_data(selected_currency):
             'Volatility cones for {selected_currency}. Uses parkinson volatility.'
         ),
     ]
-    return new_content
+    return new_content, selected_currency
 
 
 # Run the app
