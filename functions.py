@@ -13,10 +13,10 @@ from dash import html
 N = norm.cdf
 Np = norm.pdf
 
-def hv_charts(btc_data, time_frames):
+def hv_charts(currency_data, time_frames):
 
     # Create a figure for close-to-close volatility
-    fig_close = px.line(btc_data, x=btc_data.index,
+    fig_close = px.line(currency_data, x=currency_data.index,
                         y=[f'{days}_day_close_vol' for days in time_frames],
                         height=400,
                         template='plotly_dark',
@@ -27,7 +27,7 @@ def hv_charts(btc_data, time_frames):
         trace.hovertemplate = '%{y:.4f}<extra></extra>'
 
     # Create a figure for Parkinson volatility
-    fig_park = px.line(btc_data, x=btc_data.index,
+    fig_park = px.line(currency_data, x=currency_data.index,
                        y=[f'{days}_day_park_vol' for days in time_frames],
                        height=400,
                        template='plotly_dark',
@@ -35,7 +35,7 @@ def hv_charts(btc_data, time_frames):
     fig_park.update_layout(hovermode='x unified')
 
     # Create a figure for Close:Parkinson ratio
-    fig_close_park_ratio = px.line(btc_data, x=btc_data.index,
+    fig_close_park_ratio = px.line(currency_data, x=currency_data.index,
                                    y=[f'{days}_day_park_close_ratio' for days in time_frames],
                                    height=400,
                                    template='plotly_dark',
@@ -68,13 +68,12 @@ def hv_charts(btc_data, time_frames):
     # volatility cones
     percentiles = [10, 50, 90]
     percentile_colors = {10: 'MediumPurple', 50: 'MediumSeaGreen', 90: 'MediumPurple'}
-    df_hv_btc_cleaned = btc_data.dropna()
+    df_hv_btc_cleaned = currency_data.dropna()
 
     # Calculate percentiles for each window length
     volatility_percentiles = {
         window: {perc: np.percentile(df_hv_btc_cleaned[f'{window}_day_park_vol'], perc) for perc in percentiles} for window in
         time_frames}
-    print(volatility_percentiles)
 
     fig_vol_cones = go.Figure()
 

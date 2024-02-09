@@ -34,19 +34,23 @@ def parkinson_volatility(high, low, window):
     log_hl_ratio_squared = (np.log(high / low)) ** 2
     return np.sqrt((factor * log_hl_ratio_squared.rolling(window=window).mean()))
 
-# pull historical price data
-btc = yf.Ticker("BTC-USD")
-btc_data = btc.history(period="3y")
-btc_data['log_return'] = np.log(btc_data['Close'] / btc_data['Close'].shift(1))
+def fetch_historical_vol_data(currency, period):
+    # pull historical price data
+    btc = yf.Ticker(currency)
+    currency_data = btc.history(period=period)
+    currency_data['log_return'] = np.log(currency_data['Close'] / currency_data['Close'].shift(1))
 
-# Calculate the historical volatility
-time_frames = [7, 30, 90, 365]
-for days in time_frames:
-    btc_data[f'{days}_day_close_vol'] = btc_data['log_return'].rolling(window=days).std() * np.sqrt(365) # Annualizing the volatility
-    btc_data[f'{days}_day_park_vol'] = parkinson_volatility(btc_data['High'], btc_data['Low'], days) * np.sqrt(365) # Annualizing the volatility
-    btc_data[f'{days}_day_park_close_ratio'] = btc_data[f'{days}_day_park_vol'] / btc_data[f'{days}_day_close_vol']
+    # Calculate the historical volatility
+    time_frames = [7, 30, 90, 365]
+    for days in time_frames:
+        currency_data[f'{days}_day_close_vol'] = currency_data['log_return'].rolling(window=days).std() * np.sqrt(365) # Annualizing the volatility
+        currency_data[f'{days}_day_park_vol'] = parkinson_volatility(currency_data['High'], currency_data['Low'], days) * np.sqrt(365) # Annualizing the volatility
+        currency_data[f'{days}_day_park_close_ratio'] = currency_data[f'{days}_day_park_vol'] / currency_data[f'{days}_day_close_vol']
 
-close_vol, park_vol, close_park_ratio, vol_cones = hv_charts(btc_data, time_frames)
+    close_vol_fig, park_vol_fig, close_park_ratio_fig, vol_cones_fig = hv_charts(currency_data, time_frames)
+    return close_vol_fig, park_vol_fig, close_park_ratio_fig, vol_cones_fig
+
+close_vol, park_vol, close_park_ratio, vol_cones = fetch_historical_vol_data('BTC-USD', '3y')
 
 # DVOL tab layout
 dvol_tab = dbc.Container([
@@ -73,7 +77,6 @@ dvol_tab = dbc.Container([
                 dcc.Graph(id='btc_iv_percentile_indicator', figure=draw_indicator('magenta', 0, 100, 'IV Rank', btc_iv_percentile, 250, 200))
             ])
         ], width=2)
-
     ], className="my-3"),
     dbc.Row([
         dbc.Col([
@@ -190,26 +193,35 @@ vol_surface_tab = dbc.Container([
 ], fluid=True)
 
 historical_vol_tab = dbc.Container([
-    html.Div(children=[
+    html.Div(
+        dcc.Dropdown(
+            id='historical_vol_currency_dropdown',
+            options=['BTC-USD', 'ETH-USD', 'SOL-USD'],
+            value='BTC-USD',
+            style={'margin-top': '2px'},
+            className='text-black',
+        )
+    ),
+    html.Div(id='historical_vol_charts', children=[
         chart_card(
-            'BTC Close to Close Historical Volatility',
+            'BTC-USD Close to Close Historical Volatility',
             dcc.Graph(id='close_vol', figure=close_vol),
             'Close to close historical volatility (daily data)'
         ),
         chart_card(
-            'BTC Parkinson Historical Volatility',
+            'BTC-USD Parkinson Historical Volatility',
             dcc.Graph(id='park_vol', figure=park_vol),
-            'BTC Parkinson historical volatility (daily data)'
+            'Parkinson historical volatility (daily data)'
         ),
         chart_card(
-            'BTC Parkinson:C2C Ratio',
+            'BTC-USD Parkinson:C2C Ratio',
             dcc.Graph(id='close_park_ratio', figure=close_park_ratio),
             'The ratio of parkinson vol to close to close vol.'
         ),
         chart_card(
-            'BTC Parkinson Historical Volatility',
+            'BTC-USD Parkinson Historical Volatility',
             dcc.Graph(id='vol_cones', figure=vol_cones),
-            'Volatility cones for BTC. Uses parkinson volatility.'
+            'Volatility cones for BTC-USD. Uses parkinson volatility.'
         ),
     ]),
 ], fluid=True)
@@ -300,6 +312,38 @@ def refresh_data(n_clicks):
     return btc_dvol_candles, btc_iv_rank_indicator, btc_iv_percentile_indicator, eth_dvol_candles, \
            eth_iv_rank_indicator, eth_iv_percentile_indicator, dvol_ratio, btc_vol_term_structure, \
            eth_vol_term_structure, btc_vol_surface, eth_vol_surface
+
+@app.callback(
+    Output('historical_vol_charts', 'children'),
+    [Input('historical_vol_currency_dropdown', 'value')]
+)
+def historical_price_data(selected_currency):
+    # fetch data for the selected currency, and calculate the new data
+    close_vol, park_vol, close_park_ratio, vol_cones = fetch_historical_vol_data(selected_currency, '3y')
+    new_content = [
+        chart_card(
+            f'{selected_currency} Close to Close Historical Volatility',
+            dcc.Graph(id='close_vol', figure=close_vol),
+            'Close to close historical volatility (daily data)'
+        ),
+        chart_card(
+            f'{selected_currency} Parkinson Historical Volatility',
+            dcc.Graph(id='park_vol', figure=park_vol),
+            'Parkinson historical volatility (daily data)'
+        ),
+        chart_card(
+            f'{selected_currency} Parkinson:C2C Ratio',
+            dcc.Graph(id='close_park_ratio', figure=close_park_ratio),
+            'The ratio of parkinson vol to close to close vol.'
+        ),
+        chart_card(
+            f'{selected_currency} Parkinson Historical Volatility',
+            dcc.Graph(id='vol_cones', figure=vol_cones),
+            'Volatility cones for {selected_currency}. Uses parkinson volatility.'
+        ),
+    ]
+    return new_content
+
 
 # Run the app
 if __name__ == '__main__':
